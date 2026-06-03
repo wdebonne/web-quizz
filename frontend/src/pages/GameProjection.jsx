@@ -22,6 +22,7 @@ export default function GameProjection() {
   const [teams, setTeams] = useState([]);
   const [newJoiner, setNewJoiner] = useState(null);
   const [flyingEmojis, setFlyingEmojis] = useState([]);
+  const [bonusEffects, setBonusEffects] = useState([]);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -35,6 +36,10 @@ export default function GameProjection() {
       setSessionInfo(s);
       setParticipants(s.participants || []);
       setTeams(s.teams || []);
+      // Initialiser les scores si la partie est déjà active
+      const initial = (s.teams?.length > 0 ? s.teams : s.participants || [])
+        .slice().sort((a, b) => (b.score || 0) - (a.score || 0));
+      if (initial.length > 0) setScores(initial);
     });
 
     socket.on('lobby:update', ({ participants: p, teams: t }) => {
@@ -89,8 +94,13 @@ export default function GameProjection() {
     });
 
     socket.on('bonus:activated', (data) => {
+      // Bannière globale
       setBonusEvent(data);
       setTimeout(() => setBonusEvent(null), 3000);
+      // Effet sur la course (device mode)
+      const effectId = Date.now() + Math.random();
+      setBonusEffects(prev => [...prev, { ...data, effectId }]);
+      setTimeout(() => setBonusEffects(prev => prev.filter(e => e.effectId !== effectId)), 2800);
     });
 
     socket.on('game:paused', () => setStatus('paused'));
@@ -111,6 +121,20 @@ export default function GameProjection() {
 
   const COLORS = ['from-red-500 to-rose-600', 'from-blue-500 to-indigo-600', 'from-yellow-500 to-amber-600', 'from-green-500 to-emerald-600'];
   const timerPercent = timer && timer.total > 0 ? (timer.remaining / timer.total) * 100 : 0;
+
+  const BONUS_ICONS = {
+    immunity: '🛡️', double_points: '×2️', extra_time: '⏰', free_answer: '🎯',
+    steal_points: '💸', freeze: '🧊', skip_question: '⏭️', hint: '💡',
+    reverse: '🔄', extra_wrong: '✅', blind: '🙈', swap_scores: '🔀',
+  };
+  const TRACK_COLORS = [
+    { fill: 'linear-gradient(90deg,#f59e0b,#ef4444)', glow: 'rgba(245,158,11,0.7)', border: '#f59e0b' },
+    { fill: 'linear-gradient(90deg,#8b5cf6,#6366f1)', glow: 'rgba(139,92,246,0.6)', border: '#8b5cf6' },
+    { fill: 'linear-gradient(90deg,#3b82f6,#06b6d4)', glow: 'rgba(59,130,246,0.5)', border: '#3b82f6' },
+    { fill: 'linear-gradient(90deg,#10b981,#06b6d4)', glow: 'rgba(16,185,129,0.5)', border: '#10b981' },
+    { fill: 'linear-gradient(90deg,#f97316,#eab308)', glow: 'rgba(249,115,22,0.5)', border: '#f97316' },
+    { fill: 'linear-gradient(90deg,#ec4899,#8b5cf6)', glow: 'rgba(236,72,153,0.5)', border: '#ec4899' },
+  ];
 
   return (
     <div className="min-h-screen overflow-hidden relative"
@@ -452,9 +476,12 @@ export default function GameProjection() {
                 </div>
               )}
               {mode === 'device' && (
-                <div className="text-center py-4 text-gray-300 text-2xl font-semibold">
-                  📱 Répondez sur vos appareils
-                </div>
+                <RaceTrack
+                  scores={scores}
+                  bonusEffects={bonusEffects}
+                  BONUS_ICONS={BONUS_ICONS}
+                  TRACK_COLORS={TRACK_COLORS}
+                />
               )}
             </div>
           </div>
@@ -530,6 +557,174 @@ export default function GameProjection() {
           </motion.div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Composant course animée (mode Appareils) ────────────────────────────────
+
+function RaceTrack({ scores, bonusEffects, BONUS_ICONS, TRACK_COLORS }) {
+  const maxScore = Math.max(...scores.map(s => s.score), 1);
+
+  if (scores.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-8 text-gray-400 text-2xl">
+        ⏳ En attente des premiers scores...
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <p className="text-center font-display font-black text-3xl text-white mb-3"
+        style={{ textShadow: '0 0 20px rgba(99,102,241,0.6)' }}>
+        🏁 Course en direct
+      </p>
+
+      {scores.slice(0, 12).map((entry, i) => {
+        const pct = entry.score > 0 ? Math.max(5, (entry.score / maxScore) * 85) : 5;
+        const tc = TRACK_COLORS[i % TRACK_COLORS.length];
+
+        // Effets actifs sur ce participant
+        const targetEffect = bonusEffects.find(e => e.targetId === entry.id);
+        const selfEffect   = bonusEffects.find(e => !e.targetId && e.fromName === entry.name);
+        const hasEffect = !!(targetEffect || selfEffect);
+
+        return (
+          <div key={entry.id} className="flex items-center gap-3 px-3 py-1">
+
+            {/* Rang */}
+            <div className="w-12 shrink-0 text-center select-none">
+              {i === 0 ? <span className="text-3xl">🥇</span>
+               : i === 1 ? <span className="text-3xl">🥈</span>
+               : i === 2 ? <span className="text-3xl">🥉</span>
+               : <span className="font-black text-xl" style={{ color: 'rgba(255,255,255,0.4)' }}>#{i + 1}</span>}
+            </div>
+
+            {/* Avatar + effets bonus */}
+            <div className="relative shrink-0" style={{ width: 52, height: 52 }}>
+              {/* Bonus qui tombe sur la cible */}
+              <AnimatePresence>
+                {targetEffect && (
+                  <motion.div
+                    key={targetEffect.effectId}
+                    initial={{ y: -70, opacity: 1, scale: 2 }}
+                    animate={{ y: 0, opacity: [1, 1, 0], scale: [2, 1.2, 0.4] }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.65, ease: 'easeIn' }}
+                    style={{
+                      position: 'absolute', top: -30, left: 0, right: 0,
+                      textAlign: 'center', fontSize: '1.8rem', zIndex: 30, pointerEvents: 'none',
+                    }}
+                  >
+                    {BONUS_ICONS[targetEffect.bonusType] || '⭐'}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Avatar (secoué si ciblé, vibrant si bonus perso) */}
+              <motion.div
+                animate={
+                  targetEffect ? { x: [-5, 5, -5, 5, -3, 3, 0], scale: [1, 0.85, 1.05, 1] }
+                  : selfEffect  ? { scale: [1, 1.35, 1.1, 1.25, 1], rotate: [0, -10, 10, -5, 0] }
+                  : {}
+                }
+                transition={{ duration: 0.55 }}
+                style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden',
+                  border: hasEffect ? `3px solid ${targetEffect ? '#ef4444' : '#fbbf24'}` : '2px solid rgba(255,255,255,0.2)',
+                  boxShadow: hasEffect ? `0 0 20px ${targetEffect ? 'rgba(239,68,68,0.8)' : 'rgba(251,191,36,0.9)'}` : 'none',
+                }}
+              >
+                <AvatarDisplay avatar={entry.avatar} size="lg" />
+              </motion.div>
+
+              {/* Explosion dorée — bonus sur soi-même */}
+              <AnimatePresence>
+                {selfEffect && (
+                  <motion.div
+                    key={selfEffect.effectId}
+                    initial={{ scale: 0.2, opacity: 0.95 }}
+                    animate={{ scale: [0.2, 3, 4], opacity: [0.95, 0.5, 0] }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1.0, ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute', inset: 0, borderRadius: '50%', zIndex: 20, pointerEvents: 'none',
+                      background: 'radial-gradient(circle, rgba(251,191,36,0.95) 0%, rgba(251,191,36,0) 70%)',
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Nom + piste */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between mb-1.5">
+                <p className="text-white font-bold truncate"
+                  style={{ fontSize: 'clamp(0.85rem, 1.6vw, 1.25rem)' }}>
+                  {entry.name}
+                </p>
+                <motion.span
+                  key={entry.score}
+                  initial={{ scale: 1.4, color: '#fbbf24' }}
+                  animate={{ scale: 1, color: '#a78bfa' }}
+                  transition={{ duration: 0.4 }}
+                  className="font-display font-black ml-3 tabular-nums shrink-0"
+                  style={{ fontSize: 'clamp(1rem, 1.8vw, 1.4rem)' }}>
+                  {entry.score}
+                </motion.span>
+              </div>
+
+              {/* Piste de course */}
+              <div className="relative rounded-full" style={{
+                height: 32, overflow: 'visible',
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.12)',
+              }}>
+                {/* Remplissage animé (clipé) */}
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 9999, overflow: 'hidden' }}>
+                  <motion.div
+                    animate={{ width: `${pct}%` }}
+                    initial={{ width: '5%' }}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute', left: 0, top: 0, bottom: 0,
+                      borderRadius: 9999,
+                      background: tc.fill,
+                      boxShadow: `0 0 14px ${tc.glow}`,
+                    }}
+                  />
+                </div>
+
+                {/* Avatar cavalier sur la piste */}
+                <motion.div
+                  animate={{ left: `${pct}%` }}
+                  initial={{ left: '5%' }}
+                  transition={{ duration: 0.9, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 5, pointerEvents: 'none',
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
+                    border: `2px solid ${tc.border}`,
+                    boxShadow: `0 0 10px ${tc.glow}, 0 2px 8px rgba(0,0,0,0.6)`,
+                  }}>
+                    <AvatarDisplay avatar={entry.avatar} size="sm" />
+                  </div>
+                </motion.div>
+
+                {/* Ligne de départ */}
+                <div style={{
+                  position: 'absolute', left: '5%', top: 0, bottom: 0,
+                  width: 2, background: 'rgba(255,255,255,0.15)', borderRadius: 2,
+                }} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
