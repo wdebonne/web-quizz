@@ -30,10 +30,12 @@ export const connectParticipant = (participantId, sessionCode) => {
 
 export const connectProjection = () => {
   if (socket) socket.disconnect();
-  const token = localStorage.getItem('accessToken');
   socket = io('/', {
-    auth: { token },
+    auth: { projection: true },
     transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
   });
   return socket;
 };

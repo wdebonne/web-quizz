@@ -11,7 +11,7 @@ const sessionRooms = {};
 const initGameHandler = (io) => {
 
   io.use(async (socket, next) => {
-    const { token, participantId, sessionCode } = socket.handshake.auth;
+    const { token, participantId, sessionCode, projection } = socket.handshake.auth;
     // Creator authentication
     if (token) {
       try {
@@ -28,12 +28,19 @@ const initGameHandler = (io) => {
       socket.isCreator = false;
       return next();
     }
-    // Projection screen (creator token but different room)
+    // Projection screen — lecture seule, pas de compte requis
+    if (projection) {
+      socket.isProjection = true;
+      socket.isCreator = false;
+      return next();
+    }
     next(new Error('Auth manquante'));
   });
 
   io.on('connection', async (socket) => {
-    if (socket.isCreator) {
+    if (socket.isProjection) {
+      handleProjectionConnection(socket, io);
+    } else if (socket.isCreator) {
       handleCreatorConnection(socket, io);
     } else {
       handleParticipantConnection(socket, io);
@@ -269,6 +276,10 @@ function handleParticipantConnection(socket, io) {
         participant: participant.toJSON(),
         needsApproval,
       });
+      // Notify projection (toast + avatar grid)
+      io.to(`session:${session.id}:projection`).emit('participant:new', {
+        participant: participant.toJSON(),
+      });
       io.to(`session:${session.id}`).emit('lobby:update', await buildLobbyState(session.id));
 
       // If custom avatar, notify creator for approval
@@ -492,6 +503,11 @@ function handleParticipantConnection(socket, io) {
     } catch {}
   });
 
+}
+
+// --- PROJECTION ---
+
+function handleProjectionConnection(socket, io) {
   socket.on('projection:join', async ({ sessionId }) => {
     socket.join(`session:${sessionId}`);
     socket.join(`session:${sessionId}:projection`);

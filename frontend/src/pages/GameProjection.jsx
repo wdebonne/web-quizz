@@ -18,6 +18,9 @@ export default function GameProjection() {
   const [bonusEvent, setBonusEvent] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [sessionInfo, setSessionInfo] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [newJoiner, setNewJoiner] = useState(null);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -29,6 +32,26 @@ export default function GameProjection() {
       setStatus(s.status);
       setMode(s.mode);
       setSessionInfo(s);
+      setParticipants(s.participants || []);
+      setTeams(s.teams || []);
+    });
+
+    socket.on('lobby:update', ({ participants: p, teams: t }) => {
+      setParticipants(p || []);
+      setTeams(t || []);
+    });
+
+    socket.on('participant:new', ({ participant }) => {
+      setParticipants(p => {
+        if (p.find(x => x.id === participant.id)) return p;
+        return [...p, participant];
+      });
+      setNewJoiner(participant);
+      setTimeout(() => setNewJoiner(null), 3000);
+    });
+
+    socket.on('participant:left', ({ participantId }) => {
+      setParticipants(p => p.filter(x => x.id !== participantId));
     });
 
     socket.on('game:started', ({ mode: m }) => {
@@ -111,34 +134,143 @@ export default function GameProjection() {
 
       {/* Lobby screen */}
       {status === 'lobby' && (
-        <div className="flex flex-col items-center justify-center min-h-screen text-center p-8">
-          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center gap-8">
-            <div className="text-8xl animate-bounce">🎮</div>
-            <h1 className="font-display font-black text-6xl text-white">
-              {sessionInfo?.quiz?.title || 'Quiz'}
-            </h1>
-            <p className="text-2xl text-gray-400">Scannez le QR code ou entrez le code pour rejoindre</p>
+        <div className="flex flex-col min-h-screen p-8 gap-6">
 
-            <div className="flex items-center gap-12 flex-wrap justify-center">
-              {sessionInfo?.joinUrl && (
-                <div className="bg-white p-6 rounded-3xl shadow-2xl shadow-brand-500/30">
-                  <QRCodeSVG value={sessionInfo.joinUrl} size={220} level="M"
-                    fgColor="#1e1b4b" bgColor="#ffffff" />
+          {/* New joiner toast */}
+          <AnimatePresence>
+            {newJoiner && (
+              <motion.div
+                key={newJoiner.id}
+                initial={{ x: 120, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 120, opacity: 0 }}
+                className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-green-500/20 border border-green-500/50 backdrop-blur rounded-2xl px-5 py-3 shadow-xl"
+              >
+                <AvatarDisplay avatar={newJoiner.avatar} size="md" />
+                <div>
+                  <p className="text-white font-bold">{newJoiner.name}</p>
+                  <p className="text-green-400 text-sm">a rejoint la partie !</p>
                 </div>
-              )}
-              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-3xl px-12 py-8">
-                <p className="text-gray-400 text-xl mb-3">Code de la partie</p>
-                <p className="font-display font-black text-7xl tracking-widest text-brand-400">
-                  {sessionInfo?.code}
-                </p>
-                {sessionInfo?.joinUrl && (
-                  <p className="text-gray-500 text-sm mt-3 break-all max-w-xs">
-                    {sessionInfo.joinUrl}
-                  </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Header */}
+          <motion.div initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+            className="text-center pt-4">
+            <h1 className="font-display font-black text-5xl text-white mb-2">
+              {sessionInfo?.quiz?.title || '...'}
+            </h1>
+            <p className="text-gray-400 text-xl">
+              {participants.length > 0
+                ? `${participants.length} participant${participants.length > 1 ? 's' : ''} connecté${participants.length > 1 ? 's' : ''}`
+                : 'En attente des participants...'}
+            </p>
+          </motion.div>
+
+          {/* Main content: QR code + participants */}
+          <div className="flex flex-1 items-center justify-center gap-16 flex-wrap">
+
+            {/* QR Code + code */}
+            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="flex flex-col items-center gap-6">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl shadow-brand-500/30">
+                {sessionInfo?.joinUrl ? (
+                  <QRCodeSVG value={sessionInfo.joinUrl} size={240} level="M"
+                    fgColor="#1e1b4b" bgColor="#ffffff" />
+                ) : (
+                  <div className="w-60 h-60 flex items-center justify-center">
+                    <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
                 )}
               </div>
-            </div>
+              <div className="text-center">
+                <p className="text-gray-400 text-lg mb-2">Code de la partie</p>
+                <div className="bg-white/5 border border-white/20 rounded-2xl px-8 py-4">
+                  <p className="font-display font-black text-6xl tracking-widest text-brand-400">
+                    {sessionInfo?.code || '...'}
+                  </p>
+                </div>
+                {sessionInfo?.joinUrl && (
+                  <p className="text-gray-600 text-sm mt-2">{sessionInfo.joinUrl}</p>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Participants / Teams grid */}
+            {(participants.length > 0 || teams.length > 0) && (
+              <div className="flex flex-col gap-4 max-w-lg w-full">
+                {teams.length > 0 ? (
+                  /* Team mode */
+                  <div className="space-y-3">
+                    {teams.map((team, i) => {
+                      const members = participants.filter(p => p.teamId === team.id);
+                      return (
+                        <motion.div key={team.id}
+                          initial={{ x: 60, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ delay: i * 0.08 }}
+                          className="bg-white/5 border border-white/10 rounded-2xl px-5 py-3 flex items-center gap-4">
+                          <span className="text-3xl">{team.avatar}</span>
+                          <div className="flex-1">
+                            <p className="text-white font-bold">{team.name}</p>
+                            <p className="text-gray-400 text-sm">{members.length} membre{members.length > 1 ? 's' : ''}</p>
+                          </div>
+                          <div className="flex -space-x-2">
+                            {members.slice(0, 5).map(m => (
+                              <AvatarDisplay key={m.id} avatar={m.avatar} size="sm" className="ring-2 ring-gray-900" />
+                            ))}
+                            {members.length > 5 && (
+                              <div className="w-8 h-8 rounded-full bg-gray-700 ring-2 ring-gray-900 flex items-center justify-center text-xs text-gray-300">
+                                +{members.length - 5}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* Solo mode — avatar grid */
+                  <div className="flex flex-wrap gap-3 justify-center max-h-80 overflow-hidden">
+                    <AnimatePresence>
+                      {participants.map((p, i) => (
+                        <motion.div key={p.id}
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 20, delay: i < 20 ? i * 0.04 : 0 }}
+                          className="flex flex-col items-center gap-1">
+                          <div className="relative">
+                            <AvatarDisplay avatar={p.avatar} size="lg" />
+                            {!p.isConnected && (
+                              <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-red-500 ring-2 ring-gray-950" />
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 max-w-16 truncate text-center">{p.name}</p>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Pulse bar bottom */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex justify-center gap-2 pb-4">
+            {[...Array(5)].map((_, i) => (
+              <motion.div key={i}
+                animate={{ scaleY: [1, 2, 1] }}
+                transition={{ duration: 0.8, delay: i * 0.12, repeat: Infinity }}
+                className="w-2 rounded-full bg-brand-500"
+                style={{ height: 16 }} />
+            ))}
           </motion.div>
         </div>
       )}
