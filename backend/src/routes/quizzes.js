@@ -111,6 +111,19 @@ router.post('/:id/questions', authenticate, requireCreator, async (req, res) => 
   }
 });
 
+// PUT /api/quizzes/:id/questions/reorder — doit être avant /:qid
+router.put('/:id/questions/reorder', authenticate, requireCreator, async (req, res) => {
+  const { orderedIds } = req.body;
+  try {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await Question.update({ order: i }, { where: { id: orderedIds[i], quizId: req.params.id } });
+    }
+    res.json({ message: 'Ordre mis à jour.' });
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
 // PUT /api/quizzes/:id/questions/:qid
 router.put('/:id/questions/:qid', authenticate, requireCreator, async (req, res) => {
   try {
@@ -135,19 +148,6 @@ router.delete('/:id/questions/:qid', authenticate, requireCreator, async (req, r
       await remaining[i].update({ order: i });
     }
     res.json({ message: 'Question supprimée.' });
-  } catch {
-    res.status(500).json({ error: 'Erreur serveur.' });
-  }
-});
-
-// PUT /api/quizzes/:id/questions/reorder
-router.put('/:id/questions/reorder', authenticate, requireCreator, async (req, res) => {
-  const { orderedIds } = req.body;
-  try {
-    for (let i = 0; i < orderedIds.length; i++) {
-      await Question.update({ order: i }, { where: { id: orderedIds[i], quizId: req.params.id } });
-    }
-    res.json({ message: 'Ordre mis à jour.' });
   } catch {
     res.status(500).json({ error: 'Erreur serveur.' });
   }

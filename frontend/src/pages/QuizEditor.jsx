@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import QuestionEditor from '../components/QuestionEditor';
+import LaunchModal from '../components/LaunchModal';
 import api from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,6 +16,7 @@ export default function QuizEditor() {
   const [editingQ, setEditingQ] = useState(null);
   const [showQEditor, setShowQEditor] = useState(false);
   const [activeTab, setActiveTab] = useState('questions');
+  const [showLaunchModal, setShowLaunchModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -62,10 +64,10 @@ export default function QuizEditor() {
     await api.put(`/quizzes/${id}/questions/reorder`, { orderedIds: newQs.map(q => q.id) });
   };
 
-  const handleCreateGame = async () => {
-    if (questions.length === 0) return alert('Ajoutez au moins une question !');
+  const handleCreateGame = async ({ mode, teamsEnabled }) => {
+    setShowLaunchModal(false);
     try {
-      const { data } = await api.post('/games', { quizId: id });
+      const { data } = await api.post('/games', { quizId: id, mode, teamsEnabled });
       navigate(`/game/${data.id}/lobby`);
     } catch (err) { alert(err.response?.data?.error || 'Erreur.'); }
   };
@@ -89,7 +91,7 @@ export default function QuizEditor() {
       actions={
         <div className="flex gap-2">
           {id && (
-            <button onClick={handleCreateGame} className="btn-accent">
+            <button onClick={() => { if (questions.length === 0) return alert('Ajoutez au moins une question !'); setShowLaunchModal(true); }} className="btn-accent">
               ▶️ Lancer
             </button>
           )}
@@ -219,6 +221,15 @@ export default function QuizEditor() {
       {/* BONUSES TAB */}
       {activeTab === 'bonuses' && (
         <BonusManager quizId={id} />
+      )}
+
+      {/* Launch modal */}
+      {showLaunchModal && (
+        <LaunchModal
+          quizTitle={quiz?.title}
+          onConfirm={handleCreateGame}
+          onClose={() => setShowLaunchModal(false)}
+        />
       )}
 
       {/* Question editor modal */}

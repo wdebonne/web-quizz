@@ -671,6 +671,8 @@ async function buildLobbyState(sessionId) {
 async function buildSessionState(session) {
   const participants = await Participant.findAll({ where: { sessionId: session.id } });
   const teams = await Team.findAll({ where: { sessionId: session.id } });
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const joinUrl = `${appUrl}/join/${session.code}`;
   return {
     id: session.id,
     code: session.code,
@@ -678,6 +680,7 @@ async function buildSessionState(session) {
     mode: session.mode,
     teamsEnabled: session.teamsEnabled,
     currentQuestionIndex: session.currentQuestionIndex,
+    joinUrl,
     participants,
     teams,
     quiz: session.quiz,

@@ -190,22 +190,57 @@ Portainer détectera les changements Git si vous activez le **Auto update** (web
 3. Ajouter les variables d'environnement (onglet **Environment variables**)
 4. **Deploy the stack**
 
-### Mise à jour avec Portainer
+### ⚠️ Mise à jour avec Portainer — Protéger vos données
 
-1. Aller dans la stack `quizzapp`
-2. **Pull and redeploy** (si depuis Git) ou éditer et re-déployer
+> **ATTENTION** : Le bouton **"Pull and redeploy"** de Portainer peut supprimer les volumes si l'option
+> "Re-create containers" est cochée avec "Remove volumes". Vérifiez toujours ces options.
+
+**Procédure sécurisée depuis Portainer :**
+
+1. **Sauvegarder d'abord** (voir section 5)
+2. Dans la stack `quizzapp` → **Editor**
+3. Cliquer **Update the stack** (PAS "Pull and redeploy" sans vérification)
+4. Vérifier que l'option **"Remove volumes"** est **désactivée**
+5. Déployer
+
+**Alternative sécurisée via SSH :**
+
+```bash
+# Se connecter au serveur, puis :
+cd /opt/quizzapp
+git pull origin main
+docker compose up -d --build
+# NE PAS utiliser "docker compose down" avant — les containers se mettent à jour sans perdre les volumes
+```
 
 ---
 
-## 4. Mise à jour manuelle
+## 4. Mise à jour manuelle (méthode sécurisée)
 
 ```bash
 cd /opt/quizzapp
 git pull origin main
+
+# Vérifier que les volumes existent avant de mettre à jour
+docker volume ls | grep quizzapp
+
+# Mettre à jour sans toucher aux données
 docker compose up -d --build
 ```
 
-Les données sont préservées dans les volumes Docker.
+> ✅ **`docker compose up -d --build`** reconstruit l'image et redémarre les containers **sans supprimer les volumes**.
+>
+> ❌ **Ne jamais utiliser** `docker compose down -v` pour une mise à jour — cela supprime les volumes (base de données + uploads).
+
+### Vérifier la persistance des données après une mise à jour
+
+```bash
+# Compter les quiz en base — doit être > 0 si vous en aviez créé
+docker exec quizz-db psql -U quizz quizz -c "SELECT COUNT(*) FROM quizzes;"
+
+# Compter les utilisateurs
+docker exec quizz-db psql -U quizz quizz -c "SELECT COUNT(*) FROM users;"
+```
 
 ---
 

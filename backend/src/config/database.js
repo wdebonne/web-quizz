@@ -21,7 +21,8 @@ const sequelize = new Sequelize(
 async function syncDatabase() {
   await sequelize.authenticate();
   console.log('✅ Connexion PostgreSQL établie.');
-  await sequelize.sync({ alter: process.env.NODE_ENV !== 'production' });
+  // alter:true ajoute les nouvelles colonnes sans jamais supprimer les données existantes
+  await sequelize.sync({ alter: true });
   console.log('✅ Base de données synchronisée.');
 }
 

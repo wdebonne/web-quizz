@@ -55,6 +55,16 @@ docker compose up -d --build
 
 L'application sera accessible sur `http://localhost:3000`
 
+### 4. Mise à jour (sans perdre les données)
+
+```bash
+git pull origin main
+docker compose up -d --build
+```
+
+> ⚠️ **Ne jamais utiliser `docker compose down -v`** pour mettre à jour — cette option supprime les volumes (base de données + uploads).
+> Voir [DEPLOYMENT.md](DEPLOYMENT.md) section 3 pour la procédure Portainer sécurisée.
+
 ---
 
 ## Déploiement via Portainer

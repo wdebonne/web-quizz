@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import LaunchModal from '../components/LaunchModal';
 import api from '../api';
 import { motion } from 'framer-motion';
 
@@ -9,6 +10,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [launchTarget, setLaunchTarget] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,14 +33,17 @@ export default function Dashboard() {
     setQuizzes(q => q.filter(x => x.id !== id));
   };
 
-  const handleCreateGame = async (quizId) => {
+  const handleCreateGame = async ({ mode, teamsEnabled }) => {
+    const quizId = launchTarget.id;
+    setLaunchTarget(null);
     try {
-      const { data } = await api.post('/games', { quizId });
+      const { data } = await api.post('/games', { quizId, mode, teamsEnabled });
       navigate(`/game/${data.id}/lobby`);
     } catch (err) { alert(err.response?.data?.error || 'Erreur.'); }
   };
 
   return (
+    <>
     <Layout
       title="Mes Quiz"
       actions={
@@ -100,7 +105,7 @@ export default function Dashboard() {
                 <Link to={`/quiz/${quiz.id}`} className="btn-secondary btn-sm flex-1 text-center">
                   ✏️ Éditer
                 </Link>
-                <button onClick={() => handleCreateGame(quiz.id)}
+                <button onClick={() => setLaunchTarget(quiz)}
                   disabled={!quiz.questionCount}
                   className="btn-primary btn-sm flex-1"
                   title={!quiz.questionCount ? 'Ajoutez des questions d\'abord' : ''}>
@@ -116,5 +121,13 @@ export default function Dashboard() {
         </div>
       )}
     </Layout>
+    {launchTarget && (
+      <LaunchModal
+        quizTitle={launchTarget.title}
+        onConfirm={handleCreateGame}
+        onClose={() => setLaunchTarget(null)}
+      />
+    )}
+    </>
   );
 }

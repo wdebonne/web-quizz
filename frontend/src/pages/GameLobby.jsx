@@ -83,6 +83,14 @@ export default function GameLobby() {
     socketRef.current?.emit('creator:start_game');
   };
 
+  const handleCancel = async () => {
+    if (!confirm('Annuler la partie et retourner au dashboard ?')) return;
+    try {
+      await api.delete(`/games/${id}`);
+    } catch {}
+    navigate('/dashboard');
+  };
+
   const handleKick = (pid) => {
     socketRef.current?.emit('creator:kick_participant', { participantId: pid });
   };
@@ -111,6 +119,9 @@ export default function GameLobby() {
     <Layout title={`Lobby — ${session?.quiz?.title || '...'}`}
       actions={
         <div className="flex gap-2">
+          <button onClick={handleCancel} className="btn-ghost btn-sm text-red-400 hover:text-red-300">
+            ⏹️ Arrêter
+          </button>
           <button onClick={openProjection} className="btn-secondary btn-sm">📺 Projection</button>
           <button onClick={handleStart} disabled={starting || participants.length === 0}
             className="btn-accent btn-lg animate-pulse-fast">
