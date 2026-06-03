@@ -2,7 +2,7 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /build/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
 COPY frontend/ .
 RUN npm run build
 
@@ -10,9 +10,12 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# Build tools required by sharp (native module)
+RUN apk add --no-cache python3 make g++
+
 # Install production dependencies
 COPY backend/package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy backend source
 COPY backend/ .
