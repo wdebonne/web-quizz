@@ -176,6 +176,7 @@ export default function ParticipantPlay() {
     socket?.emit('participant:send_message', { content, toType: 'all' });
   };
 
+  const isProjectionMode = session?.mode === 'projection';
   const myRank = scores.findIndex(s => s.id === participant?.id) + 1;
 
   const timerPercent = timer && timer.total > 0 ? (timer.remaining / timer.total) * 100 : 100;
@@ -309,21 +310,31 @@ export default function ParticipantPlay() {
                 </div>
               )}
 
-              {/* Media */}
-              {question.mediaUrl && (
-                <div className="flex justify-center">
-                  {question.mediaType === 'image' && <img src={question.mediaUrl} className="max-h-48 rounded-2xl object-cover w-full" />}
-                  {question.mediaType === 'audio' && <audio src={question.mediaUrl} controls autoPlay className="w-full" />}
-                  {question.mediaType === 'video' && <video src={question.mediaUrl} controls autoPlay className="max-h-48 rounded-2xl w-full" />}
+              {/* En mode projection : on ne montre pas la question ni l'image sur mobile */}
+              {isProjectionMode ? (
+                <div className="flex flex-col items-center gap-3 py-4 text-center">
+                  <span className="text-5xl">📺</span>
+                  <p className="text-white font-bold text-lg">Regardez l'écran !</p>
+                  <p className="text-gray-400 text-sm">La question et l'image sont affichées sur le grand écran</p>
                 </div>
+              ) : (
+                <>
+                  {/* Media */}
+                  {question.mediaUrl && (
+                    <div className="flex justify-center">
+                      {question.mediaType === 'image' && <img src={question.mediaUrl} className="max-h-48 rounded-2xl object-cover w-full" />}
+                      {question.mediaType === 'audio' && <audio src={question.mediaUrl} controls autoPlay className="w-full" />}
+                      {question.mediaType === 'video' && <video src={question.mediaUrl} controls autoPlay className="max-h-48 rounded-2xl w-full" />}
+                    </div>
+                  )}
+                  {/* Question text */}
+                  <div className="card text-center">
+                    <h2 className="font-display font-bold text-xl sm:text-2xl text-white leading-tight">
+                      {question.content}
+                    </h2>
+                  </div>
+                </>
               )}
-
-              {/* Question text */}
-              <div className="card text-center">
-                <h2 className="font-display font-bold text-xl sm:text-2xl text-white leading-tight">
-                  {question.content}
-                </h2>
-              </div>
 
               {/* Hint (if hint bonus used) */}
               {question.hint && answerResult === null && (

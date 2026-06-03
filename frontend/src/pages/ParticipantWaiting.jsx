@@ -45,8 +45,11 @@ export default function ParticipantWaiting() {
 
     socket.on('game:kicked', () => setKicked(true));
 
-    socket.on('game:started', () => {
-      navigate(`/play/${sessionId}`, { replace: true });
+    socket.on('game:started', ({ mode }) => {
+      navigate(`/play/${sessionId}`, {
+        replace: true,
+        state: { participant, session: { ...session, mode } },
+      });
     });
 
     socket.on('team:created', ({ team }) => setTeamCreated(team));

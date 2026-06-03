@@ -338,72 +338,102 @@ export default function GameProjection() {
 
       {/* Active game — Projection mode (question on screen) */}
       {status === 'active' && !showResults && question && (
-        <div className="flex flex-col min-h-screen p-8 gap-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-2xl px-5 py-2 font-display font-bold text-xl">
+        <div className="flex flex-col min-h-screen bg-gray-950">
+
+          {/* Top bar: badge + timer number */}
+          <div className="flex items-center justify-between px-8 pt-5 pb-2">
+            <div className="flex items-center gap-3">
+              <span className="bg-indigo-500/30 text-indigo-300 border border-indigo-500/50 rounded-2xl px-5 py-2 font-display font-bold text-2xl">
                 Q{questionIndex + 1} / {totalQuestions}
               </span>
               {question.isBonus && (
-                <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-2xl px-4 py-2 font-bold text-lg">
+                <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 rounded-2xl px-4 py-2 font-bold text-xl">
                   ⭐ BONUS
                 </span>
               )}
             </div>
             {timer && timer.total > 0 && (
-              <div className="flex items-center gap-4">
-                <span className={`font-display font-black text-5xl ${timer.remaining <= 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
-                  {timer.remaining}
-                </span>
-              </div>
+              <span className={`font-display font-black text-6xl tabular-nums
+                ${timer.remaining <= 5 ? 'text-red-400 animate-pulse' : timer.remaining <= 10 ? 'text-yellow-400' : 'text-white'}`}>
+                {timer.remaining}
+              </span>
             )}
           </div>
 
           {/* Timer bar */}
           {timer && timer.total > 0 && (
-            <div className="w-full bg-gray-800 rounded-full h-3">
-              <div className={`h-3 rounded-full transition-all duration-1000 ${timerPercent > 50 ? 'bg-green-500' : timerPercent > 25 ? 'bg-yellow-500' : 'bg-red-500'}`}
+            <div className="w-full bg-gray-800 h-2">
+              <div className={`h-2 transition-all duration-1000
+                ${timerPercent > 50 ? 'bg-green-500' : timerPercent > 25 ? 'bg-yellow-500' : 'bg-red-500'}`}
                 style={{ width: `${timerPercent}%` }} />
             </div>
           )}
 
-          {/* Media */}
-          {question.mediaUrl && (
-            <div className="flex justify-center">
-              {question.mediaType === 'image' && <img src={question.mediaUrl} className="max-h-64 rounded-3xl object-cover shadow-2xl" />}
-              {question.mediaType === 'audio' && <audio src={question.mediaUrl} controls autoPlay className="w-full max-w-lg" />}
-              {question.mediaType === 'video' && <video src={question.mediaUrl} controls autoPlay className="max-h-64 rounded-3xl" />}
+          {/* Content area */}
+          <div className="flex-1 flex flex-col px-8 py-4 gap-4 min-h-0">
+
+            {/* Image (contrainte à 35vh max) */}
+            {question.mediaUrl && (
+              <div className="flex justify-center shrink-0">
+                {question.mediaType === 'image' && (
+                  <img src={question.mediaUrl}
+                    className="rounded-3xl object-contain shadow-2xl"
+                    style={{ maxHeight: '35vh', maxWidth: '100%' }} />
+                )}
+                {question.mediaType === 'audio' && (
+                  <audio src={question.mediaUrl} controls autoPlay className="w-full max-w-lg" />
+                )}
+                {question.mediaType === 'video' && (
+                  <video src={question.mediaUrl} controls autoPlay
+                    className="rounded-3xl shadow-2xl"
+                    style={{ maxHeight: '35vh', maxWidth: '100%' }} />
+                )}
+              </div>
+            )}
+
+            {/* Question text — fond sombre pour contraste */}
+            <div className="flex items-center justify-center px-4 shrink-0">
+              <div className="rounded-3xl px-10 py-6 text-center w-full max-w-5xl"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                <h2 className="font-display font-black text-white leading-tight"
+                  style={{
+                    fontSize: 'clamp(1.8rem, 4vw, 3.5rem)',
+                    textShadow: '0 2px 20px rgba(0,0,0,0.8)',
+                  }}>
+                  {question.content}
+                </h2>
+              </div>
             </div>
-          )}
 
-          {/* Question */}
-          <div className="flex-1 flex items-center justify-center">
-            <h2 className="font-display font-black text-4xl sm:text-5xl text-white text-center leading-tight max-w-4xl">
-              {question.content}
-            </h2>
-          </div>
-
-          {/* Answer options (shown in projection mode) */}
-          {mode === 'projection' && question.options?.length > 0 && Array.isArray(question.options) && (
-            <div className={`grid gap-4 ${question.options.length <= 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
-              {question.options.map((opt, i) => (
-                <div key={opt.id} className={`relative p-6 rounded-3xl bg-gradient-to-br ${COLORS[i % 4]} shadow-xl`}>
-                  <span className="font-display font-black text-2xl text-white">{opt.text}</span>
-                  <div className="absolute top-4 right-4 w-10 h-10 bg-black/30 rounded-xl flex items-center justify-center font-bold text-white">
-                    {['A', 'B', 'C', 'D'][i]}
-                  </div>
+            {/* Answers */}
+            <div className="mt-auto pb-6">
+              {mode === 'projection' && question.options?.length > 0 && Array.isArray(question.options) && (
+                <div className={`grid gap-3 ${question.options.length <= 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                  {question.options.map((opt, i) => (
+                    <div key={opt.id}
+                      className={`relative flex items-center gap-4 px-6 py-5 rounded-3xl bg-gradient-to-br ${COLORS[i % 4]} shadow-xl`}>
+                      <div className="w-12 h-12 shrink-0 bg-black/30 rounded-2xl flex items-center justify-center font-display font-black text-2xl text-white">
+                        {['A', 'B', 'C', 'D'][i]}
+                      </div>
+                      <span className="font-display font-black text-white leading-tight"
+                        style={{ fontSize: 'clamp(1.1rem, 2.5vw, 2rem)' }}>
+                        {opt.text}
+                      </span>
+                      {opt.mediaUrl && (
+                        <img src={opt.mediaUrl} className="ml-auto w-16 h-16 object-cover rounded-xl" />
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {/* Device mode: only show instructions */}
-          {mode === 'device' && (
-            <div className="text-center text-gray-400 text-xl">
-              📱 Répondez sur vos appareils
+              {mode === 'device' && (
+                <div className="text-center py-4 text-gray-400 text-2xl font-semibold">
+                  📱 Répondez sur vos appareils
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
