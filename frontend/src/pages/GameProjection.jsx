@@ -21,6 +21,7 @@ export default function GameProjection() {
   const [participants, setParticipants] = useState([]);
   const [teams, setTeams] = useState([]);
   const [newJoiner, setNewJoiner] = useState(null);
+  const [flyingEmojis, setFlyingEmojis] = useState([]);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -95,6 +96,16 @@ export default function GameProjection() {
     socket.on('game:paused', () => setStatus('paused'));
     socket.on('game:resumed', () => setStatus('active'));
 
+    socket.on('emoji:reaction', ({ emoji }) => {
+      const id = Date.now() + Math.random();
+      const goUp = Math.random() > 0.5;
+      const x = 5 + Math.random() * 88;
+      const size = 2.8 + Math.random() * 2.4;
+      const wobble = (Math.random() - 0.5) * 30;
+      setFlyingEmojis(prev => [...prev, { id, emoji, x, goUp, size, wobble }]);
+      setTimeout(() => setFlyingEmojis(prev => prev.filter(e => e.id !== id)), 4200);
+    });
+
     return () => disconnect();
   }, [sessionId]);
 
@@ -119,6 +130,39 @@ export default function GameProjection() {
           ))}
         </div>
       )}
+
+      {/* Flying emojis — visibles sur tous les écrans */}
+      <AnimatePresence>
+        {flyingEmojis.map(e => (
+          <motion.div
+            key={e.id}
+            initial={{
+              left: `${e.x}%`,
+              top: e.goUp ? '100%' : '-10%',
+              opacity: 1,
+              scale: 0.4,
+              rotate: 0,
+            }}
+            animate={{
+              top: e.goUp ? '-15%' : '110%',
+              opacity: [1, 1, 1, 0],
+              scale: [0.4, 1.3, 1.1, 0.9],
+              rotate: [0, e.wobble, -e.wobble * 0.5, e.wobble * 0.3],
+            }}
+            transition={{ duration: 4, ease: 'easeOut' }}
+            style={{
+              position: 'fixed',
+              fontSize: `${e.size}rem`,
+              zIndex: 200,
+              pointerEvents: 'none',
+              filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
+              lineHeight: 1,
+            }}
+          >
+            {e.emoji}
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       {/* Bonus notification */}
       <AnimatePresence>

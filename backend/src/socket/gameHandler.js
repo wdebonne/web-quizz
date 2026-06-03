@@ -432,6 +432,16 @@ function handleParticipantConnection(socket, io) {
     }
   });
 
+  socket.on('participant:send_emoji', ({ emoji }) => {
+    if (!socket.participantId || !socket.sessionId) return;
+    const ALLOWED = ['👍','❤️','🔥','😂','😮','👏','🎉','🤔','😎','💯','⭐','🚀','😍','🥳','😱'];
+    if (!ALLOWED.includes(emoji)) return;
+    io.to(`session:${socket.sessionId}`).emit('emoji:reaction', {
+      emoji,
+      participantId: socket.participantId,
+    });
+  });
+
   socket.on('participant:send_message', async ({ content, toType, toId, toName }) => {
     try {
       if (!socket.participantId || !socket.sessionId) return;

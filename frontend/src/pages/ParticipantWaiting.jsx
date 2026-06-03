@@ -5,6 +5,8 @@ import ChatPanel from '../components/ChatPanel';
 import { getSocket } from '../socket';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const EMOJIS = ['👍','❤️','🔥','😂','😮','👏','🎉','🤔','😎','💯','⭐','🚀','😍','🥳','😱'];
+
 export default function ParticipantWaiting() {
   const { sessionId } = useParams();
   const { state } = useLocation();
@@ -17,6 +19,8 @@ export default function ParticipantWaiting() {
   const [avatarRejected, setAvatarRejected] = useState(false);
   const [kicked, setKicked] = useState(false);
   const [teamCreated, setTeamCreated] = useState(null);
+  const [emojiCooldown, setEmojiCooldown] = useState(false);
+  const [lastSentEmoji, setLastSentEmoji] = useState(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -61,6 +65,16 @@ export default function ParticipantWaiting() {
   const handleSendMessage = ({ content, toType, toId, toName }) => {
     const socket = getSocket();
     socket?.emit('participant:send_message', { content, toType, toId, toName });
+  };
+
+  const handleSendEmoji = (emoji) => {
+    if (emojiCooldown) return;
+    const socket = getSocket();
+    socket?.emit('participant:send_emoji', { emoji });
+    setLastSentEmoji(emoji);
+    setEmojiCooldown(true);
+    setTimeout(() => setEmojiCooldown(false), 1500);
+    setTimeout(() => setLastSentEmoji(null), 800);
   };
 
   if (kicked) return (
@@ -145,6 +159,27 @@ export default function ParticipantWaiting() {
             </div>
           </div>
         )}
+
+        {/* Emoji reactions */}
+        <div className="card">
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3 text-center">
+            Réactions 🎭
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {EMOJIS.map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => handleSendEmoji(emoji)}
+                disabled={emojiCooldown}
+                className={`text-2xl w-11 h-11 flex items-center justify-center rounded-xl transition-all
+                  ${emojiCooldown ? 'opacity-40 cursor-not-allowed scale-95' : 'hover:scale-125 active:scale-95 bg-gray-800 hover:bg-gray-700'}
+                  ${lastSentEmoji === emoji ? 'ring-2 ring-brand-400 scale-125' : ''}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Chat */}
         <ChatPanel
