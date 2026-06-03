@@ -496,7 +496,27 @@ function handleParticipantConnection(socket, io) {
     socket.join(`session:${sessionId}`);
     socket.join(`session:${sessionId}:projection`);
     const session = await getSession(sessionId);
-    if (session) socket.emit('session:state', await buildSessionState(session));
+    if (!session) return;
+
+    socket.emit('session:state', await buildSessionState(session));
+
+    // Si la partie est déjà active, renvoyer la question courante à la projection
+    if (session.status === 'active' && session.currentQuestionIndex >= 0) {
+      const quiz = await Quiz.findByPk(session.quizId, {
+        include: [{ model: Question, as: 'questions', order: [['order', 'ASC']] }],
+      });
+      const question = quiz?.questions?.[session.currentQuestionIndex];
+      if (question) {
+        const questionData = prepareQuestionForParticipants(question, quiz);
+        const timeLimit = question.timeLimit ?? quiz.defaultTimeLimit;
+        socket.emit('game:question', {
+          question: questionData,
+          questionIndex: session.currentQuestionIndex,
+          totalQuestions: quiz.questions.length,
+          timeLimit,
+        });
+      }
+    }
   });
 }
 

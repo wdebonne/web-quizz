@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { connectProjection, disconnect } from '../socket';
 import { AvatarDisplay, getDiceBearUrl } from '../components/AvatarPicker';
+import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function GameProjection() {
@@ -111,17 +112,32 @@ export default function GameProjection() {
       {/* Lobby screen */}
       {status === 'lobby' && (
         <div className="flex flex-col items-center justify-center min-h-screen text-center p-8">
-          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-            <div className="text-8xl mb-6 animate-bounce">🎮</div>
-            <h1 className="font-display font-black text-6xl text-white mb-4">
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="flex flex-col items-center gap-8">
+            <div className="text-8xl animate-bounce">🎮</div>
+            <h1 className="font-display font-black text-6xl text-white">
               {sessionInfo?.quiz?.title || 'Quiz'}
             </h1>
-            <p className="text-2xl text-gray-400 mb-8">En attente des participants...</p>
-            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-3xl px-12 py-6">
-              <p className="text-gray-400 mb-2">Rejoindre avec le code</p>
-              <p className="font-display font-black text-6xl tracking-widest text-brand-400">
-                {sessionInfo?.code}
-              </p>
+            <p className="text-2xl text-gray-400">Scannez le QR code ou entrez le code pour rejoindre</p>
+
+            <div className="flex items-center gap-12 flex-wrap justify-center">
+              {sessionInfo?.joinUrl && (
+                <div className="bg-white p-6 rounded-3xl shadow-2xl shadow-brand-500/30">
+                  <QRCodeSVG value={sessionInfo.joinUrl} size={220} level="M"
+                    fgColor="#1e1b4b" bgColor="#ffffff" />
+                </div>
+              )}
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-3xl px-12 py-8">
+                <p className="text-gray-400 text-xl mb-3">Code de la partie</p>
+                <p className="font-display font-black text-7xl tracking-widest text-brand-400">
+                  {sessionInfo?.code}
+                </p>
+                {sessionInfo?.joinUrl && (
+                  <p className="text-gray-500 text-sm mt-3 break-all max-w-xs">
+                    {sessionInfo.joinUrl}
+                  </p>
+                )}
+              </div>
             </div>
           </motion.div>
         </div>
