@@ -114,22 +114,20 @@ export default function GameProjection() {
 
   return (
     <div className="min-h-screen overflow-hidden relative"
-      style={{ fontFamily: 'Poppins, sans-serif', background: status === 'lobby' ? 'transparent' : '#030712' }}>
-      {/* Animated background — uniquement hors lobby */}
-      {status !== 'lobby' && (
-        <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-900/20 via-gray-950 to-accent-900/10" />
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="absolute rounded-full blur-3xl opacity-5"
-              style={{
-                width: `${100 + i * 50}px`, height: `${100 + i * 50}px`,
-                background: i % 2 === 0 ? '#6366f1' : '#f59e0b',
-                left: `${5 + i * 12}%`, top: `${5 + (i % 3) * 30}%`,
-                animation: `float ${4 + i}s ease-in-out ${i * 0.8}s infinite`,
-              }} />
-          ))}
-        </div>
-      )}
+      style={{ fontFamily: 'Poppins, sans-serif', background: '#0d0d1a' }}>
+      {/* Animated background — derrière tout le contenu (z-index: 0) */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="absolute rounded-full blur-3xl"
+            style={{
+              opacity: 0.07,
+              width: `${120 + i * 60}px`, height: `${120 + i * 60}px`,
+              background: i % 2 === 0 ? '#6366f1' : '#a855f7',
+              left: `${5 + i * 15}%`, top: `${10 + (i % 3) * 28}%`,
+              animation: `float ${5 + i}s ease-in-out ${i * 0.8}s infinite`,
+            }} />
+        ))}
+      </div>
 
       {/* Flying emojis — visibles sur tous les écrans */}
       <AnimatePresence>
@@ -181,7 +179,7 @@ export default function GameProjection() {
 
       {/* Lobby screen */}
       {status === 'lobby' && (
-        <div className="flex flex-col min-h-screen" style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' }}>
+        <div className="flex flex-col min-h-screen" style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' }}>
 
           {/* New joiner toast */}
           <AnimatePresence>
@@ -338,67 +336,87 @@ export default function GameProjection() {
 
       {/* Active game — Projection mode (question on screen) */}
       {status === 'active' && !showResults && question && (
-        <div className="flex flex-col min-h-screen bg-gray-950">
+        <div className="flex flex-col min-h-screen" style={{ position: 'relative', zIndex: 1 }}>
 
-          {/* Top bar: badge + timer number */}
-          <div className="flex items-center justify-between px-8 pt-5 pb-2">
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-8 pt-5 pb-3"
+            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}>
             <div className="flex items-center gap-3">
-              <span className="bg-indigo-500/30 text-indigo-300 border border-indigo-500/50 rounded-2xl px-5 py-2 font-display font-bold text-2xl">
+              <span className="font-display font-bold text-2xl text-white px-5 py-2 rounded-2xl"
+                style={{ background: 'rgba(99,102,241,0.4)', border: '1px solid rgba(99,102,241,0.7)' }}>
                 Q{questionIndex + 1} / {totalQuestions}
               </span>
               {question.isBonus && (
-                <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 rounded-2xl px-4 py-2 font-bold text-xl">
+                <span className="font-bold text-xl text-yellow-300 px-4 py-2 rounded-2xl"
+                  style={{ background: 'rgba(234,179,8,0.25)', border: '1px solid rgba(234,179,8,0.5)' }}>
                   ⭐ BONUS
                 </span>
               )}
             </div>
-            {timer && timer.total > 0 && (
-              <span className={`font-display font-black text-6xl tabular-nums
-                ${timer.remaining <= 5 ? 'text-red-400 animate-pulse' : timer.remaining <= 10 ? 'text-yellow-400' : 'text-white'}`}>
-                {timer.remaining}
-              </span>
-            )}
+            {/* Timer — toujours visible */}
+            <div className="flex items-center gap-3">
+              {timer && timer.total > 0 && (
+                <span className="font-display font-black tabular-nums"
+                  style={{
+                    fontSize: '4rem',
+                    lineHeight: 1,
+                    color: timer.remaining <= 5 ? '#f87171' : timer.remaining <= 10 ? '#fbbf24' : '#ffffff',
+                    textShadow: timer.remaining <= 5
+                      ? '0 0 30px rgba(248,113,113,0.8)'
+                      : '0 2px 12px rgba(0,0,0,0.8)',
+                  }}>
+                  {timer.remaining}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Timer bar */}
           {timer && timer.total > 0 && (
-            <div className="w-full bg-gray-800 h-2">
-              <div className={`h-2 transition-all duration-1000
-                ${timerPercent > 50 ? 'bg-green-500' : timerPercent > 25 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                style={{ width: `${timerPercent}%` }} />
+            <div className="w-full h-3" style={{ background: 'rgba(255,255,255,0.1)' }}>
+              <div className="h-3 transition-all duration-1000"
+                style={{
+                  width: `${timerPercent}%`,
+                  background: timerPercent > 50 ? '#22c55e' : timerPercent > 25 ? '#eab308' : '#ef4444',
+                  boxShadow: `0 0 8px ${timerPercent > 50 ? '#22c55e' : timerPercent > 25 ? '#eab308' : '#ef4444'}`,
+                }} />
             </div>
           )}
 
-          {/* Content area */}
-          <div className="flex-1 flex flex-col px-8 py-4 gap-4 min-h-0">
+          {/* Content */}
+          <div className="flex-1 flex flex-col px-8 py-5 gap-5">
 
-            {/* Image (contrainte à 35vh max) */}
+            {/* Image */}
             {question.mediaUrl && (
               <div className="flex justify-center shrink-0">
                 {question.mediaType === 'image' && (
-                  <img src={question.mediaUrl}
+                  <img src={question.mediaUrl} alt=""
                     className="rounded-3xl object-contain shadow-2xl"
-                    style={{ maxHeight: '35vh', maxWidth: '100%' }} />
+                    style={{ maxHeight: '32vh', maxWidth: '70%', border: '2px solid rgba(255,255,255,0.15)' }} />
                 )}
                 {question.mediaType === 'audio' && (
                   <audio src={question.mediaUrl} controls autoPlay className="w-full max-w-lg" />
                 )}
                 {question.mediaType === 'video' && (
-                  <video src={question.mediaUrl} controls autoPlay
-                    className="rounded-3xl shadow-2xl"
-                    style={{ maxHeight: '35vh', maxWidth: '100%' }} />
+                  <video src={question.mediaUrl} controls autoPlay className="rounded-3xl shadow-2xl"
+                    style={{ maxHeight: '32vh', maxWidth: '70%' }} />
                 )}
               </div>
             )}
 
-            {/* Question text — fond sombre pour contraste */}
-            <div className="flex items-center justify-center px-4 shrink-0">
-              <div className="rounded-3xl px-10 py-6 text-center w-full max-w-5xl"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                <h2 className="font-display font-black text-white leading-tight"
+            {/* Question */}
+            <div className="flex justify-center shrink-0 px-4">
+              <div className="w-full max-w-5xl rounded-3xl text-center px-10 py-7"
+                style={{
+                  background: 'rgba(255,255,255,0.13)',
+                  border: '2px solid rgba(255,255,255,0.25)',
+                  backdropFilter: 'blur(4px)',
+                }}>
+                <h2 className="font-display font-black text-white"
                   style={{
-                    fontSize: 'clamp(1.8rem, 4vw, 3.5rem)',
-                    textShadow: '0 2px 20px rgba(0,0,0,0.8)',
+                    fontSize: 'clamp(2rem, 4.5vw, 4rem)',
+                    lineHeight: 1.2,
+                    textShadow: '0 2px 24px rgba(0,0,0,1), 0 0 60px rgba(0,0,0,0.8)',
                   }}>
                   {question.content}
                 </h2>
@@ -406,29 +424,35 @@ export default function GameProjection() {
             </div>
 
             {/* Answers */}
-            <div className="mt-auto pb-6">
+            <div className="mt-auto">
               {mode === 'projection' && question.options?.length > 0 && Array.isArray(question.options) && (
                 <div className={`grid gap-3 ${question.options.length <= 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
                   {question.options.map((opt, i) => (
                     <div key={opt.id}
-                      className={`relative flex items-center gap-4 px-6 py-5 rounded-3xl bg-gradient-to-br ${COLORS[i % 4]} shadow-xl`}>
-                      <div className="w-12 h-12 shrink-0 bg-black/30 rounded-2xl flex items-center justify-center font-display font-black text-2xl text-white">
+                      className={`flex items-center gap-5 rounded-3xl bg-gradient-to-br ${COLORS[i % 4]}`}
+                      style={{ padding: '1.2rem 1.8rem', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                      <div className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center font-display font-black text-3xl text-white"
+                        style={{ background: 'rgba(0,0,0,0.35)' }}>
                         {['A', 'B', 'C', 'D'][i]}
                       </div>
-                      <span className="font-display font-black text-white leading-tight"
-                        style={{ fontSize: 'clamp(1.1rem, 2.5vw, 2rem)' }}>
+                      <span className="font-display font-black text-white"
+                        style={{
+                          fontSize: 'clamp(1.3rem, 2.8vw, 2.4rem)',
+                          textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                          lineHeight: 1.2,
+                        }}>
                         {opt.text}
                       </span>
                       {opt.mediaUrl && (
-                        <img src={opt.mediaUrl} className="ml-auto w-16 h-16 object-cover rounded-xl" />
+                        <img src={opt.mediaUrl} alt="" className="ml-auto rounded-xl object-cover"
+                          style={{ width: '5rem', height: '5rem' }} />
                       )}
                     </div>
                   ))}
                 </div>
               )}
-
               {mode === 'device' && (
-                <div className="text-center py-4 text-gray-400 text-2xl font-semibold">
+                <div className="text-center py-4 text-gray-300 text-2xl font-semibold">
                   📱 Répondez sur vos appareils
                 </div>
               )}
@@ -439,7 +463,7 @@ export default function GameProjection() {
 
       {/* Results / Race view */}
       {showResults && (
-        <div className="flex flex-col min-h-screen p-8">
+        <div className="flex flex-col min-h-screen p-8" style={{ position: 'relative', zIndex: 1 }}>
           <h2 className="font-display font-black text-4xl text-center text-white mb-8">
             {status === 'finished' ? '🏁 Résultats finaux' : '📊 Classement'}
           </h2>
