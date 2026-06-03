@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: quizz-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-quizz}
+      DB_USER: ${DB_USER:-quizz}
+      DB_PASSWORD: ${DB_PASSWORD:-quizz_secret}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production_please}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_refresh_secret_too}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@quizz.local}
+      APP_NAME: ${APP_NAME:-QuizzApp}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - quizz-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:15-alpine
+    container_name: quizz-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-quizz}
+      POSTGRES_USER: ${DB_USER:-quizz}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-quizz_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - quizz-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-quizz} -d ${DB_NAME:-quizz}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  quizz-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  uploads_data:
